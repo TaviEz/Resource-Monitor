@@ -1,0 +1,21 @@
+import time
+import psutil
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+# print(psutil.virtual_memory().percent)
+# print(str(psutil.virtual_memory().total/pow(10,9)) + " GB")
+# print(psutil.virtual_memory().percent)
+print(type(psutil.virtual_memory().percent))
+
+# def display_usage(cpu_usage, ram_usage, ram_available):
+#     print(f"Cpu Usage: {cpu_usage} %")
+#     print(f"Ram Usage: {ram_usage} %", end = " ")
+#     print(f"Ram Available: {ram_available}")
+
+def animate(i):
+
+
+
+
+
