@@ -1,28 +1,109 @@
-import platform
+import psutil
 import tkinter as tk
+import platform
+
 import os
 import subprocess
-import psutil
+
 import cpuinfo
 import tabulate
-from main import startGraph
+import sqlite3
+
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from matplotlib.backends.backend_pdf import PdfPages
+
+from datetime import datetime
+
+y1 = []
+frame_length = 20
+
+connection = sqlite3.connect("test.db")
+cursor = connection.cursor()
+
+def animateCPUusage(i):
+    y1.append(psutil.cpu_percent())
+
+    if len(y1) < frame_length:
+        plt.cla()
+        plt.plot(y1, 'g', label="Real-Time CPU Usage")
+        plt.title("Real-Time CPU Usage")
+    elif len(y1) == frame_length:
+        #show the graphic at a specific time = frame_length
+        plt.savefig("CPU.png")
+        pp = PdfPages("cpuPdf.pdf")
+        pp.savefig()
+        pp.close()
+
+    plt.ylim(0, 100)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Cpu usage (%) ")
+    plt.legend(loc = "upper right")
+    #automatic padding
+    plt.tight_layout()
+
+y2 = []
+def animateMemoryusage(i):
+    y2.append(psutil.virtual_memory().percent)
+    if len(y2) < frame_length:
+        plt.cla()
+        plt.plot(y2, 'g', label="Real-Time RAM Usage")
+        plt.title("RAM usage")
+    elif len(y2) == frame_length:
+        #show the graphic at a specific time = frame_length
+        plt.savefig("RAM.png")
+        pp = PdfPages("ramPdf.pdf")
+        pp.savefig()
+        pp.close()
+
+    plt.ylim(0, 100)
+    plt.xlabel("Time (s)")
+    plt.ylabel("RAM usage (%) ")
+    plt.legend(loc = "upper right")
+    plt.tight_layout()
+
+# gcf = get current figure
+def startGraph(user_input):
+    if user_input == "CPU":
+        ani = FuncAnimation(plt.gcf(), animateCPUusage, interval=1000)
+    elif user_input == "RAM":
+        ani = FuncAnimation(plt.gcf(), animateMemoryusage, interval=1000)
+    # automatic padding
+    plt.tight_layout()
+    plt.show()
 
 
 
+
+
+########################## GUI #########################
 def show_frame(frame):
     frame.tkraise()
 
 def openScreenshot(path):
     subprocess.Popen([path], shell=True)
 
+cursor.execute("create table CPU (cpu_date text not null, cpu_time text not null, cpu_usage_percent text not null, cpu_freq text not null) ")
+CPU_freq = str(psutil.cpu_freq().current) + "MHz"
 def updateCPUUsage():
-    CPUusageLabel.config(text="CPU usage: " + str(psutil.cpu_percent()) + "%")
+    usage = str(psutil.cpu_percent()) + "%"
+    date = datetime.now().strftime("%Y-%m-%d")
+    time = datetime.now().strftime("%H:%M:%S")
+    cursor.execute("""insert into CPU (cpu_date, cpu_time, cpu_usage_percent, cpu_freq) values(?, ?, ?, ?)""",
+                   (date, time, usage, CPU_freq))
+    CPUusageLabel.config(text="CPU usage: " + usage)
     CPUusageLabel.after(1000,updateCPUUsage)
 
+cursor.execute("create table RAM (RAM_date text not null, RAM_time text not null, RAM_used text, RAM_total text, RAM_percent text) ")
 def updateRAMUsage():
-    total = byteToGigabyte(psutil.virtual_memory().total)
-    used = byteToGigabyte(psutil.virtual_memory().used)
-    RAMlabel.config(text="RAM: " + used + "GB/" + total + "GB " + str(psutil.virtual_memory().percent) + "%")
+    date = datetime.now().strftime("%Y-%m-%d")
+    time = datetime.now().strftime("%H:%M:%S")
+    used = str(byteToGigabyte(psutil.virtual_memory().used)) + "GB"
+    total = str(byteToGigabyte(psutil.virtual_memory().total)) + "GB"
+    percent = str(psutil.virtual_memory().percent) + "%"
+
+    RAMlabel.config(text="RAM: " + used + "/" + total + " " + percent)
+    cursor.execute("""insert into RAM (RAM_date, RAM_time, RAM_used, RAM_total, RAM_percent) values (?,?,?,?,?)""", (date, time, used, total, percent))
     RAMlabel.after(1000, updateRAMUsage)
 
 
@@ -102,7 +183,6 @@ CPUfreqLabel.grid(row=4, column=1,pady=10)
 
 CPUusageLabel = tk.Label(homeFrame, text="", padx=10, pady=5)
 CPUusageLabel.grid(row=5, column=1, pady=10)
-#CPUlabel.after(2000, lambda:updateText(CPUlabel, "CPU " + displayCPU()))
 updateCPUUsage()
 
 RAMlabel = tk.Label(homeFrame, text="", padx=10, pady=5)
@@ -156,6 +236,7 @@ show_frame(homeFrame)
 
 root.mainloop()
 
-# y1 = cpu y2 = ram
-# print(max(y1))
-# print(max(y2))
+############################## END OF GUI #############################
+
+connection.commit()
+connection.close()
