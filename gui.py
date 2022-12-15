@@ -83,18 +83,18 @@ def show_frame(frame):
 def openScreenshot(path):
     subprocess.Popen([path], shell=True)
 
-cursor.execute("create table CPU (cpu_date text not null, cpu_time text not null, cpu_usage_percent text not null, cpu_freq text not null) ")
+#cursor.execute("create table CPU (cpu_date text not null, cpu_time text not null, cpu_usage_percent text not null, cpu_freq text not null) ")
 CPU_freq = str(psutil.cpu_freq().current) + "MHz"
 def updateCPUUsage():
     usage = str(psutil.cpu_percent()) + "%"
     date = datetime.now().strftime("%Y-%m-%d")
     time = datetime.now().strftime("%H:%M:%S")
-    cursor.execute("""insert into CPU (cpu_date, cpu_time, cpu_usage_percent, cpu_freq) values(?, ?, ?, ?)""",
-                   (date, time, usage, CPU_freq))
+    # cursor.execute("""insert into CPU (cpu_date, cpu_time, cpu_usage_percent, cpu_freq) values(?, ?, ?, ?)""",
+    #                (date, time, usage, CPU_freq))
     CPUusageLabel.config(text="CPU usage: " + usage)
     CPUusageLabel.after(1000,updateCPUUsage)
 
-cursor.execute("create table RAM (RAM_date text not null, RAM_time text not null, RAM_used text, RAM_total text, RAM_percent text) ")
+#cursor.execute("create table RAM (RAM_date text not null, RAM_time text not null, RAM_used text, RAM_total text, RAM_percent text) ")
 def updateRAMUsage():
     date = datetime.now().strftime("%Y-%m-%d")
     time = datetime.now().strftime("%H:%M:%S")
@@ -103,8 +103,26 @@ def updateRAMUsage():
     percent = str(psutil.virtual_memory().percent) + "%"
 
     RAMlabel.config(text="RAM: " + used + "/" + total + " " + percent)
-    cursor.execute("""insert into RAM (RAM_date, RAM_time, RAM_used, RAM_total, RAM_percent) values (?,?,?,?,?)""", (date, time, used, total, percent))
+    # cursor.execute("""insert into RAM (RAM_date, RAM_time, RAM_used, RAM_total, RAM_percent) values (?,?,?,?,?)""", (date, time, used, total, percent))
     RAMlabel.after(1000, updateRAMUsage)
+
+def average(li):
+    return round(sum(li) / len(li), 2)
+
+def getInfoFrom(data, table):
+    myList = []
+    info = []
+    cursor.execute(f"""select {data} from {table}""")
+    row = cursor.fetchall()
+
+    for r in row:
+        myList.append(float(r[0]))
+
+    info.append(min(myList))
+    info.append(max(myList))
+    info.append(average(myList))
+
+    return info
 
 
 data = psutil.disk_partitions()
@@ -135,14 +153,13 @@ def display_all_partitions():
 def byteToGigabyte(bytes):
     return '{0:.2f}'.format(bytes/1000000000)
 
+######################### GUI #########################
+
 root = tk.Tk()
 root.state("zoomed")
 
 root.rowconfigure(0, weight=1)
 root.columnconfigure(0, weight=1)
-
-# canvas = tk.Canvas(root, height = 700, width = 700, bg = "#00311C")
-# canvas.pack()
 
 homeFrame = tk.Frame(root, bg="#00311C")
 cpuFrame = tk.Frame(root, bg="#00311C")
@@ -184,6 +201,16 @@ CPUfreqLabel.grid(row=4, column=1,pady=10)
 CPUusageLabel = tk.Label(homeFrame, text="", padx=10, pady=5)
 CPUusageLabel.grid(row=5, column=1, pady=10)
 updateCPUUsage()
+
+CPUminLabel = tk.Label(homeFrame, text=f'''{getInfoFrom('cpu_usage_percent', 'CPU')[0]} %''', padx=10, pady=5)
+CPUminLabel.grid(row=5, column=4, pady=10)
+
+CPUmaxLabel =tk.Label(homeFrame, text=f'''{getInfoFrom('cpu_usage_percent', 'CPU')[1]} %''', padx=10, pady=5)
+CPUmaxLabel.grid(row=5, column=3, pady=10)
+
+CPUaverageLabel = tk.Label(homeFrame, text=f'''{getInfoFrom('cpu_usage_percent', 'CPU')[2]} %''', padx=10, pady=5)
+CPUaverageLabel.grid(row=5, column=2, pady=10)
+
 
 RAMlabel = tk.Label(homeFrame, text="", padx=10, pady=5)
 RAMlabel.grid(row=6, column=1, pady=10)
