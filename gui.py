@@ -1,5 +1,7 @@
 import psutil
 import tkinter as tk
+import customtkinter
+
 import platform
 
 import os
@@ -15,11 +17,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from datetime import datetime
 
-y1 = []
-frame_length = 20
-
 connection = sqlite3.connect("test.db")
 cursor = connection.cursor()
+
+y1 = []
+frame_length = 20
 
 def animateCPUusage(i):
     y1.append(psutil.cpu_percent())
@@ -155,11 +157,15 @@ def byteToGigabyte(bytes):
 
 ######################### GUI #########################
 
-root = tk.Tk()
+
+customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
+customtkinter.set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
+
+root = customtkinter.CTk()
 root.state("zoomed")
 
-root.rowconfigure(0, weight=1)
-root.columnconfigure(0, weight=1)
+# root.rowconfigure(0, weight=1)
+# root.columnconfigure(0, weight=1)
 
 homeFrame = tk.Frame(root, bg="#00311C")
 cpuFrame = tk.Frame(root, bg="#00311C")
@@ -188,8 +194,11 @@ DiskusageBtn.grid(row=1, column=3)
 
 
 
-CPUplatformLabel = tk.Label(homeFrame, text=platform.processor(), padx=10,pady=5)
-CPUplatformLabel.grid(row=2, column=1)
+# CPUplatformLabel = tk.Label(homeFrame, text=platform.processor(), padx=10,pady=5)
+# CPUplatformLabel.grid(row=2, column=1)
+
+label = customtkinter.CTkLabel(master=root, text=platform.processor())
+label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
 CPUnameLabel = tk.Label(homeFrame, text=cpuinfo.get_cpu_info()["brand_raw"], padx=10, pady=5)
 CPUnameLabel.grid(row=3, column=1)
