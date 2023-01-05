@@ -20,7 +20,7 @@ i = 0
 freq = str(psutil.cpu_freq().current) + "MHz"
 while True:
     cpu_usage = str(psutil.cpu_percent(interval=1))
-    date = datetime.now().strftime("%Y-%m-%d")
+    date = datetime.now().strftime("%Y-%#m-%#d")
     time = datetime.now().strftime("%H:%M:%S")
     ram_used = str(byteToGigabyte(psutil.virtual_memory().used))
     ram_total = str(byteToGigabyte(psutil.virtual_memory().total))
@@ -28,7 +28,7 @@ while True:
     cursor.execute("""insert into CPU (cpu_date, cpu_time, cpu_usage_percent, cpu_freq) values(?, ?, ?, ?)""", (date, time, cpu_usage, freq))
     cursor.execute("""insert into RAM (RAM_date, RAM_time, RAM_used, RAM_total, RAM_percent) values (?,?,?,?,?)""",
                    (date, time, ram_used, ram_total, percent))
-    if i == 3:
+    if i == 5:
         break
     i += 1
 
