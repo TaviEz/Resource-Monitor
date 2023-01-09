@@ -81,11 +81,14 @@ class HistoryFrame(customtkinter.CTkFrame):
 
     def checkIfNum(self):
         try:
-            isinstance(self.entry.get(), int)
+            myEntry = self.entry.get()
+            if int(myEntry) <= 0:
+                raise ValueError
+            isinstance(myEntry, int)
             self.custom_history = Last24Frame(self, day=int(self.entry.get()))
             self.custom_history.grid(row=0, column=1, sticky='nsew')
         except ValueError:
-            messagebox.showinfo("showwarning", "Please enter a number")
+            messagebox.showinfo("Warning!", "Please enter a positive number")
 
 
 class CPUinfoFrame(customtkinter.CTkFrame):
