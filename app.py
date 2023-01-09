@@ -2,17 +2,18 @@ from tkinter import *
 from tkinter import messagebox
 import customtkinter
 
-import os
-from PIL import Image
+import sqlite3
 
 import cpuinfo
 import platform
 import psutil
 import tabulate
 
-import sqlite3
+import os
+from PIL import Image
 
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -38,91 +39,24 @@ class RtdFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.info_frame = InfoFrame(self, corner_radius=10)
-        self.info_frame.grid(row=0, column=0, padx=20, pady=10, sticky="nsew")
+        self.cpu_info_frame = CPUinfoFrame(self, corner_radius=10)
+        self.cpu_info_frame.grid(row=0, column=0, padx=20, pady=10, sticky="nsew")
 
-        self.disk_usage_frame = DiskUsageFrame(self, width=290)
-        self.disk_usage_frame.grid(row=1, column=0, padx=20, pady=100, sticky="nsew")
+        self.system_info_frame = SystemInfoFrame(self, corner_radius=10)
+        self.system_info_frame.grid(row=1, column=0, padx=20, pady=10)
 
-        self.circle_usage_frame = CircularFrame(self)
+        self.circle_usage_frame = HardwareFrame(self)
         self.circle_usage_frame.displayCPU()
         self.circle_usage_frame.displayRAM()
-        self.circle_usage_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
+        self.circle_usage_frame.grid(row=0, column=1, padx=20, pady=20, sticky="ew")
 
         self.last_24_frame = Last24Frame(self, day=1)
         self.last_24_frame.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
 
-        self.y1 = []
-        self.y2 = []
-        self.frame_length = 5
 
-        self.plot_cpu_button = customtkinter.CTkButton(self.circle_usage_frame, corner_radius=0, height=40,
-                                                       border_spacing=10, text="Plot CPU usage",
-                                                       fg_color="transparent", text_color=("gray75", "gray90"),
-                                                       hover_color=("#01284E", "#024280"), anchor="center",
-                                                       command=lambda: self.startGraph("CPU"))
-        self.plot_cpu_button.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
+        self.disk_usage_frame = DiskUsageFrame(self, width=290)
+        self.disk_usage_frame.grid(row=2, column=0, padx=20, pady=10)
 
-        self.plot_ram_button = customtkinter.CTkButton(self.circle_usage_frame, corner_radius=0, height=40,
-                                                       border_spacing=10, text="Plot RAM usage",
-                                                       fg_color="transparent", text_color=("gray75", "gray90"),
-                                                       hover_color=("#01284E", "#024280"), anchor="center",
-                                                       command=lambda: self.startGraph("RAM"))
-        self.plot_ram_button.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
-
-    def animateCPUusage(self,i):
-        self.y1.append(psutil.cpu_percent())
-
-        if len(self.y1) < self.frame_length:
-            plt.cla()
-            plt.plot(self.y1, 'g', label="Real-Time CPU Usage")
-            plt.title("Real-Time CPU Usage")
-        elif len(self.y1) == self.frame_length:
-            #show the graphic at a specific time = frame_length
-            date = datetime.now().strftime("%Y-%#m-%#d")
-            time = datetime.now().strftime("%H-%M-%S")
-            plt.savefig(f"CPU {date} {time}.png")
-            pp = PdfPages(f"CPUpdf {date} {time}.pdf")
-            pp.savefig()
-            pp.close()
-
-        plt.ylim(0, 100)
-        plt.xlabel("Time (s)")
-        plt.ylabel("Cpu usage (%) ")
-        plt.legend(loc = "upper right")
-        #automatic padding
-        plt.tight_layout()
-
-    def animateMemoryusage(self,i):
-        self.y2.append(psutil.virtual_memory().percent)
-        if len(self.y2) < self.frame_length:
-            plt.cla()
-            plt.plot(self.y2, 'g', label="Real-Time RAM Usage")
-            plt.title("RAM usage")
-        elif len(self.y2) == self.frame_length:
-            #show the graphic at a specific time = frame_length
-            date = datetime.now().strftime("%Y-%#m-%#d")
-            time = datetime.now().strftime("%H-%M-%S")
-            plt.savefig(f"RAM {date} {time}.png")
-            pp = PdfPages(f"RAMpdf {date} {time}.pdf")
-            pp.savefig()
-            pp.close()
-
-        plt.ylim(0, 100)
-        plt.xlabel("Time (s)")
-        plt.ylabel("RAM usage (%) ")
-        plt.legend(loc = "upper right")
-        plt.tight_layout()
-
-    # gcf = get current figure
-    def startGraph(self, choice):
-        if choice == "CPU":
-            ani = FuncAnimation(plt.gcf(), self.animateCPUusage, interval=1000)
-        elif choice == "RAM":
-            ani = FuncAnimation(plt.gcf(), self.animateMemoryusage, interval=1000)
-        # automatic padding
-        plt.tight_layout()
-        plt.show()
 
 class HistoryFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
@@ -154,28 +88,57 @@ class HistoryFrame(customtkinter.CTkFrame):
             messagebox.showinfo("showwarning", "Please enter a number")
 
 
-class InfoFrame(customtkinter.CTkFrame):
+class CPUinfoFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.CPUplatformLabel = customtkinter.CTkLabel(self, text=f'Platform: {platform.processor()}',
+
+        self.CPUplatformLabel = customtkinter.CTkLabel(self, text=f'Processor Type: {platform.processor()}',
                                                        font=customtkinter.CTkFont(size=20))
-        self.CPUplatformLabel.grid(row=0, column=0, padx=20, pady=10)
+        self.CPUplatformLabel.grid(row=1, column=0, padx=20, pady=10)
 
         self.CPUnameLabel = customtkinter.CTkLabel(self,
-                                                   text=f'Name: {cpuinfo.get_cpu_info()["brand_raw"].split("6-Core")[0]}',
+                                                   text=f'CPU Name: {cpuinfo.get_cpu_info()["brand_raw"]}',
                                                    font=customtkinter.CTkFont(size=20))
-        self.CPUnameLabel.grid(row=1, column=0, padx=20, pady=10)
+        self.CPUnameLabel.grid(row=2, column=0, padx=20, pady=10)
 
-        self.CPUcores = customtkinter.CTkLabel(self, text=cpuinfo.get_cpu_info()["brand_raw"].split("5600X ")[1],
+        self.CPUcores = customtkinter.CTkLabel(self, text=f'Total Cores: {psutil.cpu_count(logical=False)}',
                                                font=customtkinter.CTkFont(size=20))
-        self.CPUcores.grid(row=2, column=0, padx=20, pady=10)
+        self.CPUcores.grid(row=3, column=0, padx=20, pady=10)
+
+        self.CPUthreads = customtkinter.CTkLabel(self, text=f'Total Threads: {psutil.cpu_count(logical=True)}',
+                                                 font=customtkinter.CTkFont(size=20))
+        self.CPUthreads.grid(row=4, column=0, padx=20, pady=10)
+
 
         self.CPU_freq = str(psutil.cpu_freq().current) + "MHz"
-        self.CPUfreqLabel = customtkinter.CTkLabel(self, text=f'Nominal Frequency: {self.CPU_freq}', padx=10,
+        self.CPUfreqLabel = customtkinter.CTkLabel(self, text=f'Processor Base Frequency: {self.CPU_freq}', padx=10,
                                                    pady=5,
                                                    font=customtkinter.CTkFont(size=20))
-        self.CPUfreqLabel.grid(row=3, column=0, padx=20, pady=10)
+        self.CPUfreqLabel.grid(row=5, column=0, padx=20, pady=10)
+
+class SystemInfoFrame(customtkinter.CTkFrame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.uname = platform.uname()
+
+        self.computerNetwork = customtkinter.CTkLabel(self, text=f"Computer network name: {self.uname.node}",
+                                                      font=customtkinter.CTkFont(size=20))
+        self.computerNetwork.grid(row=0, column=0, padx=20, pady=10)
+
+        self.systemName = customtkinter.CTkLabel(self, text=f"System: {self.uname.system}",
+                                                 font=customtkinter.CTkFont(size=20))
+        self.systemName.grid(row=1, column=0, padx=20, pady=10)
+
+        self.release = customtkinter.CTkLabel(self, text=f"Release: {self.uname.release}",
+                                              font=customtkinter.CTkFont(size=20))
+        self.release.grid(row=2, column=0, padx=20, pady=10)
+
+        self.version = customtkinter.CTkLabel(self, text=f"Version: {self.uname.version}",
+                                              font=customtkinter.CTkFont(size=20))
+        self.version.grid(row=3, column=0, padx=20, pady=10)
+
 
 class DiskUsageFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
@@ -205,8 +168,8 @@ class DiskUsageFrame(customtkinter.CTkFrame):
         return '{0:.2f}'.format(bytes / 1000000000)
 
     def display_all_partitions(self):
+        #info = list with n dictionaries, n = no of partitions
         info = []
-
         for i in self.get_partition_names():
             info.append(self.disk_info(i))
 
@@ -214,9 +177,85 @@ class DiskUsageFrame(customtkinter.CTkFrame):
         info_tabulated = tabulate.tabulate(info_values, headers=info[0].keys())
         return info_tabulated
 
-class CircularFrame(customtkinter.CTkFrame):
+class HardwareFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.y1 = []
+        self.y2 = []
+        self.frame_length = 20
+
+        self.plot_cpu_button = customtkinter.CTkButton(self, corner_radius=0, height=40,
+                                                       border_spacing=10, text="Plot CPU usage",
+                                                       fg_color="transparent", text_color=("gray75", "gray90"),
+                                                       hover_color=("#01284E", "#024280"), anchor="center",
+                                                       command=lambda: self.startGraph("CPU"))
+        self.plot_cpu_button.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
+
+        self.plot_ram_button = customtkinter.CTkButton(self, corner_radius=0, height=40,
+                                                       border_spacing=10, text="Plot RAM usage",
+                                                       fg_color="transparent", text_color=("gray75", "gray90"),
+                                                       hover_color=("#01284E", "#024280"), anchor="center",
+                                                       command=lambda: self.startGraph("RAM"))
+        self.plot_ram_button.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
+
+    def animateCPUusage(self, i):
+        self.y1.append(psutil.cpu_percent())
+
+        if len(self.y1) < self.frame_length:
+            #cla=clear axis
+            plt.cla()
+            plt.plot(self.y1, 'g', label="Real-Time CPU Usage")
+            plt.title("Real-Time CPU Usage")
+        elif len(self.y1) == self.frame_length:
+            # show the graphic at a specific time = frame_length
+            date = datetime.now().strftime("%Y-%#m-%#d")
+            time = datetime.now().strftime("%H-%M-%S")
+            plt.savefig(f"CPU {date} {time}.png")
+            pp = PdfPages(f"CPUpdf {date} {time}.pdf")
+            pp.savefig()
+            pp.close()
+
+        plt.ylim(0, 100)
+        plt.xlabel("Time (s)")
+        plt.ylabel("Cpu usage (%) ")
+        plt.legend(loc="upper right")
+        # automatic padding
+        plt.tight_layout()
+        #return plt
+
+    def animateMemoryusage(self, i):
+        self.y2.append(psutil.virtual_memory().percent)
+        if len(self.y2) < self.frame_length:
+            plt.cla()
+            plt.plot(self.y2, 'g', label="Real-Time RAM Usage")
+            plt.title("RAM usage")
+        elif len(self.y2) == self.frame_length:
+            # show the graphic at a specific time = frame_length
+            date = datetime.now().strftime("%Y-%#m-%#d")
+            time = datetime.now().strftime("%H-%M-%S")
+            plt.savefig(f"RAM {date} {time}.png")
+            pp = PdfPages(f"RAMpdf {date} {time}.pdf")
+            pp.savefig()
+            pp.close()
+
+        plt.ylim(0, 100)
+        plt.xlabel("Time (s)")
+        plt.ylabel("RAM usage (%) ")
+        plt.legend(loc="upper right")
+        plt.tight_layout()
+
+        # gcf = get current figure
+    def startGraph(self, choice):
+        if choice == "CPU":
+            ani = FuncAnimation(plt.gcf(), self.animateCPUusage, interval=1000)
+        elif choice == "RAM":
+            ani = FuncAnimation(plt.gcf(), self.animateMemoryusage, interval=1000)
+
+        # automatic padding
+        plt.tight_layout()
+        plt.show()
+        plt.close()
 
     def displayCPU(self):
         self.CPUusageLabel = customtkinter.CTkLabel(self, text="",
@@ -388,13 +427,11 @@ class App(customtkinter.CTk):
         self.title("Resource monitor")
         self.geometry("1500x700")
 
-        #self.grid_columnconfigure((2, 3), weight=0)
-        self.grid_rowconfigure((0, 1, 2), weight=1)
+        self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
         self.sidebar_frame = SidebarFrame(self, width=140, corner_radius=2)
         self.sidebar_frame.grid(row=0, column=0,rowspan = 3, sticky="nsew")
-        #self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
         self.rtd_frame = RtdFrame(self, fg_color = "transparent")
         self.history_frame = HistoryFrame(self, fg_color = "transparent")
@@ -420,7 +457,7 @@ class App(customtkinter.CTk):
                                                               )
         self.sidebar_history_button.grid(row=2, column=0)
 
-
+        self.select_frame_by_name("rtd")
 
     def rtd_button_event(self):
         self.select_frame_by_name("rtd")
