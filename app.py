@@ -22,6 +22,7 @@ from datetime import datetime
 connection = sqlite3.connect("test.db")
 cursor=connection.cursor()
 
+#https://github.com/TomSchimansky/CustomTkinter/wiki
 customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
 customtkinter.set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
 
@@ -46,8 +47,6 @@ class RtdFrame(customtkinter.CTkFrame):
         self.system_info_frame.grid(row=1, column=0, padx=20, pady=10)
 
         self.circle_usage_frame = HardwareFrame(self)
-        self.circle_usage_frame.displayCPU()
-        self.circle_usage_frame.displayRAM()
         self.circle_usage_frame.grid(row=0, column=1, padx=20, pady=20, sticky="ew")
 
         self.last_24_frame = Last24Frame(self, day=1)
@@ -84,6 +83,7 @@ class HistoryFrame(customtkinter.CTkFrame):
             myEntry = self.entry.get()
             if int(myEntry) <= 0:
                 raise ValueError
+            #https://stackoverflow.com/questions/11204789/how-to-properly-use-pythons-isinstance-to-check-if-a-variable-is-a-number
             isinstance(myEntry, int)
             self.custom_history = Last24Frame(self, day=int(self.entry.get()))
             self.custom_history.grid(row=0, column=1, sticky='nsew')
@@ -95,7 +95,7 @@ class CPUinfoFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
+        #https://pyshark.com/system-and-hardware-information-using-python/
         self.CPUplatformLabel = customtkinter.CTkLabel(self, text=f'Processor Type: {platform.processor()}',
                                                        font=customtkinter.CTkFont(size=20))
         self.CPUplatformLabel.grid(row=1, column=0, padx=20, pady=10)
@@ -124,6 +124,7 @@ class SystemInfoFrame(customtkinter.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # https://pyshark.com/system-and-hardware-information-using-python/
         self.uname = platform.uname()
 
         self.computerNetwork = customtkinter.CTkLabel(self, text=f"Computer network name: {self.uname.node}",
@@ -154,6 +155,8 @@ class DiskUsageFrame(customtkinter.CTkFrame):
 
 
     def get_partition_names(self):
+        #https://psutil.readthedocs.io/en/latest/index.html?highlight=disk%20usage
+        #return a list with all partition names
         self.data = psutil.disk_partitions()
         return [i.device for i in self.data]
 
@@ -176,6 +179,7 @@ class DiskUsageFrame(customtkinter.CTkFrame):
         for i in self.get_partition_names():
             info.append(self.disk_info(i))
 
+        #https://stackoverflow.com/questions/9535954/printing-lists-as-tabular-data
         info_values = [i.values() for i in info]
         info_tabulated = tabulate.tabulate(info_values, headers=info[0].keys())
         return info_tabulated
@@ -202,7 +206,11 @@ class HardwareFrame(customtkinter.CTkFrame):
                                                        command=lambda: self.startGraph("RAM"))
         self.plot_ram_button.grid(row=1, column=1, padx=20, pady=20, sticky="nsew")
 
+        self.displayCPU()
+        self.displayRAM()
+
     def animateCPUusage(self, i):
+        #https://www.youtube.com/watch?v=Ercd-Ip5PfQ&list=PL986Lus2SJNVjMtu54C81E4Kq8UoF3gcD&index=6
         self.y1.append(psutil.cpu_percent())
 
         if len(self.y1) < self.frame_length:
@@ -260,6 +268,7 @@ class HardwareFrame(customtkinter.CTkFrame):
         plt.show()
         plt.close()
 
+    #first create the label for the component then in another func change the value
     def displayCPU(self):
         self.CPUusageLabel = customtkinter.CTkLabel(self, text="",
                                                     font=customtkinter.CTkFont(size=20),
@@ -279,6 +288,7 @@ class HardwareFrame(customtkinter.CTkFrame):
     def updateCPUUsage(self):
         usage = str(psutil.cpu_percent()) + "%"
         self.CPUusageLabel.configure(text="CPU usage: " + usage)
+        #https://stackoverflow.com/questions/44725090/python-tkinter-update-every-second
         self.CPUusageLabel.after(1000, self.updateCPUUsage)
 
     def updateRAMusage(self):
@@ -294,6 +304,7 @@ class Last24Frame(customtkinter.CTkFrame):
     def __init__(self, *args, day, **kwargs):
         super().__init__(*args, **kwargs)
 
+        #weight = proportional
         self.grid_columnconfigure((1,2,3), weight=1)
 
         self.day = day
@@ -318,6 +329,8 @@ class Last24Frame(customtkinter.CTkFrame):
         self.AverageLabel = customtkinter.CTkLabel(self, text="Average", padx=10, pady=5)
         self.AverageLabel.grid(row=1, column=3, sticky='nsew')
 
+        #for images/icons : https://www.youtube.com/watch?v=NoTM8JciWaQ&list=PL986Lus2SJNVjMtu54C81E4Kq8UoF3gcD&index=7&t=150s
+        #current directory: https://www.geeksforgeeks.org/get-directory-of-current-python-script/
         self.CPUimage = customtkinter.CTkImage(Image.open(os.path.join(os.getcwd(), "cpu.png")), size=(20, 20))
         self.RAMimage = customtkinter.CTkImage(Image.open(os.path.join(os.getcwd(), "ram-memory.png")), size=(20, 20))
 
@@ -332,6 +345,7 @@ class Last24Frame(customtkinter.CTkFrame):
         self.CPUusageLabel = customtkinter.CTkLabel(self, text="Usage", bg_color="#313131")
         self.CPUusageLabel.grid(row=3, column=0, sticky='nsew')
 
+        #lists with 3 values: min, max, avg
         CPUinfo = self.getInfoFrom('cpu_usage_percent', 'CPU', day)
         RAMinfoGB = self.getInfoFrom('RAM_used', 'RAM', day)
         RAMinfoPercent = self.getInfoFrom('RAM_percent', 'RAM', day)
@@ -377,10 +391,11 @@ class Last24Frame(customtkinter.CTkFrame):
     def getInfoFrom(self, data, table, days_ago):
         myList = []
         info = []
-
+        #date-time: https://www.programiz.com/python-programming/datetime/current-datetime
         date_column = table + "_date"
         time_column = table + "_time"
 
+        # '#' is used to eliminate leading zeros
         end_date = datetime.now().strftime("%Y-%#m-%#d")
         start_date = end_date.split("-")
         # start_date[0] = year
@@ -405,7 +420,8 @@ class Last24Frame(customtkinter.CTkFrame):
         start_date = "-".join(start_date)
 
         time = datetime.now().strftime("%H:%M:%S")
-
+        #select query https://www.sqlitetutorial.net/sqlite-select/
+        #query with parameters://stackoverflow.com/questions/22776756/parameterized-queries-in-sqlite3-using-question-marks
         cursor.execute(f"""select {data} from {table} where ({date_column} = ? and {time_column} between ? and '23:59:59') or
                                                     ({date_column} = ? and {time_column} <= ?) or
                                                     ({date_column} > ? and {time_column} < ?)""",
@@ -447,7 +463,7 @@ class App(customtkinter.CTk):
                                                           fg_color="transparent", text_color=("gray75", "gray90"),
                                                           hover_color=("#01284E", "#024280"), anchor="w",
                                                           image=self.rtd_image,
-                                                          command=self.rtd_button_event
+                                                          command=lambda:self.select_frame_by_name('rtd')
                                                           )
         self.sidebar_rtd_button.grid(row=1, column=0)
 
@@ -456,17 +472,17 @@ class App(customtkinter.CTk):
                                                               fg_color="transparent", text_color=("gray75", "gray90"),
                                                               hover_color=("#01284E", "#024280"), anchor="w",
                                                               image=self.history_image,
-                                                              command=self.history_button_event,
+                                                              command=lambda:self.select_frame_by_name('history')
                                                               )
         self.sidebar_history_button.grid(row=2, column=0)
 
         self.select_frame_by_name("rtd")
 
-    def rtd_button_event(self):
-        self.select_frame_by_name("rtd")
-
-    def history_button_event(self):
-        self.select_frame_by_name("history")
+    # def rtd_button_event(self):
+    #     self.select_frame_by_name("rtd")
+    #
+    # def history_button_event(self):
+    #     self.select_frame_by_name("history")
 
     def select_frame_by_name(self, name):
         self.sidebar_rtd_button.configure(fg_color=("gray75", "gray25") if name == "rtd" else "transparent")

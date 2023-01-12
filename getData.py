@@ -11,7 +11,7 @@ def average(li):
 connection = sqlite3.connect("test.db")
 cursor = connection.cursor()
 
-
+#https://www.sqlitetutorial.net/sqlite-create-table/
 cursor.execute("create table if not exists CPU (cpu_date text not null, cpu_time text not null, cpu_usage_percent text not null, cpu_freq text not null) ")
 cursor.execute("create table if not exists RAM (RAM_date text not null, RAM_time text not null, RAM_used text, RAM_total text, RAM_percent text) ")
 info =[]
